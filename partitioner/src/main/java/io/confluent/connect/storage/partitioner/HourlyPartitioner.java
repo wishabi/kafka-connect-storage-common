@@ -23,13 +23,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import io.confluent.connect.storage.common.StorageCommonConfig;
-
 public class HourlyPartitioner<T> extends TimeBasedPartitioner<T> {
   @Override
   public void configure(Map<String, Object> config) {
     long partitionDurationMs = TimeUnit.HOURS.toMillis(1);
-    String delim = (String) config.get(StorageCommonConfig.DIRECTORY_DELIM_CONFIG);
+    delim = getDirectoryDelimiter(config);
     String pathFormat =
         "'year'=YYYY" + delim + "'month'=MM" + delim + "'day'=dd" + delim + "'hour'=HH";
 

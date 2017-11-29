@@ -19,11 +19,13 @@ package io.confluent.connect.storage.partitioner;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.connect.connector.ConnectRecord;
+import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.data.Timestamp;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
+import org.apache.kafka.connect.errors.DataException;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
@@ -38,7 +40,6 @@ import java.util.Locale;
 import java.util.Map;
 
 import io.confluent.connect.storage.common.SchemaGenerator;
-import io.confluent.connect.storage.common.StorageCommonConfig;
 import io.confluent.connect.storage.errors.PartitionException;
 
 public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
@@ -56,7 +57,7 @@ public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
       DateTimeZone timeZone,
       Map<String, Object> config
   ) {
-    delim = (String) config.get(StorageCommonConfig.DIRECTORY_DELIM_CONFIG);
+    delim = getDirectoryDelimiter(config);
     this.partitionDurationMs = partitionDurationMs;
     this.pathFormat = pathFormat;
     this.formatter = getDateTimeFormatter(pathFormat, timeZone).withLocale(locale);
@@ -111,7 +112,7 @@ public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
       );
     }
 
-    String delim = (String) config.get(StorageCommonConfig.DIRECTORY_DELIM_CONFIG);
+    delim = getDirectoryDelimiter(config);
     String pathFormat = (String) config.get(PartitionerConfig.PATH_FORMAT_CONFIG);
     if (pathFormat.equals("") || pathFormat.equals(delim)) {
       throw new ConfigException(
@@ -230,22 +231,29 @@ public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
 
   public static class RecordFieldTimestampExtractor implements TimestampExtractor {
     private String fieldName;
+    private String fieldNameSource;
     private DateTimeFormatter dateTime;
 
     @Override
     public void configure(Map<String, Object> config) {
       fieldName = (String) config.get(PartitionerConfig.TIMESTAMP_FIELD_NAME_CONFIG);
+      fieldNameSource = (String) config.get(PartitionerConfig.TIMESTAMP_FIELD_SOURCE_CONFIG);
       dateTime = ISODateTimeFormat.dateTime();
     }
 
     @Override
     public Long extract(ConnectRecord<?> record) {
-      Object value = record.value();
-      if (value instanceof Struct) {
-        Struct struct = (Struct) value;
-        Object timestampValue = struct.get(fieldName);
-        Schema valueSchema = record.valueSchema();
-        Schema fieldSchema = valueSchema.field(fieldName).schema();
+      Object source;
+      if (fieldNameSource.equals("key")) {
+        source = record.key();
+      } else {
+        source = record.value();
+      }
+
+      if (source instanceof Struct) {
+        Struct struct = (Struct) source;
+        Object timestampValue = getNestedFieldValue(struct);
+        Schema fieldSchema = getNestedField(record.valueSchema()).schema();
 
         if (Timestamp.LOGICAL_NAME.equals(fieldSchema.name())) {
           return ((Date) timestampValue).getTime();
@@ -266,9 +274,9 @@ public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
                 "Error extracting timestamp from record field: " + fieldName
             );
         }
-      } else if (value instanceof Map) {
-        Map<?, ?> map = (Map<?, ?>) value;
-        Object timestampValue = map.get(fieldName);
+      } else if (source instanceof Map) {
+        Map<?, ?> map = (Map<?, ?>) source;
+        Object timestampValue = getNestedFieldValue(map);
         if (timestampValue instanceof Number) {
           return ((Number) timestampValue).longValue();
         } else if (timestampValue instanceof String) {
@@ -288,6 +296,100 @@ public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
         log.error("Value is not of Struct or Map type.");
         throw new PartitionException("Error encoding partition.");
       }
+    }
+
+    private Object getField(Struct struct, String fieldName) {
+      Object field;
+      try {
+        field = struct.get(fieldName);
+      } catch (DataException e) {
+        throw new DataException(
+                String.format("The field named '%s' does not exist.", fieldName), e);
+      }
+      return field;
+    }
+
+    private Object getNestedFieldValue(Struct struct) {
+      final String[] fieldNames = fieldName.split("\\.");
+      Struct tmpStruct = struct;
+      Object tmpObject;
+      try {
+        // Iterate down to final struct
+        int i = 0;
+        while (i < fieldNames.length - 1) {
+          try {
+            tmpObject = getField(tmpStruct, fieldNames[i]);
+          } catch (DataException e) {
+            throw new DataException(
+                    String.format("Unable to find nested field '%s'", fieldNames[i]));
+          }
+          tmpStruct = (Struct) tmpObject;
+          i++;
+        }
+        // Extract from final struct
+        tmpObject = getField(tmpStruct, fieldNames[i]);
+      } catch (DataException e) {
+        throw new DataException(
+                String.format("The nested field named '%s' does not exist.", fieldName), e);
+      }
+      return tmpObject;
+    }
+
+    private Object getNestedFieldValue(Map<?, ?> valueMap) {
+      final String[] fieldNames = fieldName.split("\\.");
+      Map<?, ?> tmpMap = valueMap;
+      Object tmpObject;
+      try {
+        // Iterate down to final map
+        int i = 0;
+        while (i < fieldNames.length - 1) {
+          tmpObject = tmpMap.get(fieldNames[i]);
+          if (tmpObject == null) {
+            throw new DataException(
+                    String.format("Unable to find nested field '%s'", fieldNames[i]));
+          }
+          tmpMap = (Map<?, ?>) tmpObject;
+          i++;
+        }
+        // Extract from final map
+        tmpObject = tmpMap.get(fieldNames[i]);
+        if (tmpObject == null) {
+          throw new DataException(
+                  String.format("Unable to find nested field '%s'", fieldNames[i]));
+        }
+      } catch (DataException e) {
+        throw new DataException(
+                String.format("The nested field named '%s' does not exist.", fieldName), e);
+      }
+      return tmpObject;
+    }
+
+    private Field getNestedField(Schema schema) {
+      final String[] fieldNames = fieldName.split("\\.");
+      if (fieldNames.length == 1) {
+        return schema.field(fieldName);
+      }
+      int i = 0;
+      Field tmpField = schema.field(fieldNames[i++]);
+      try {
+        // Iterate down to final schema
+        while (i < fieldNames.length - 1) {
+          final String nestedFieldName = fieldNames[i];
+          try {
+            tmpField = tmpField.schema().field(nestedFieldName);
+          } catch (DataException e) {
+            throw new DataException(
+                    String.format("Unable to find nested field '%s'", nestedFieldName));
+          }
+          i++;
+        }
+        // Extract from final schema
+        tmpField = tmpField.schema().field(fieldNames[i]);
+      } catch (DataException e) {
+        throw new DataException(
+                String.format("The nested field named '%s' does not exist.", fieldName), e);
+      }
+      return tmpField;
     }
   }
 }
