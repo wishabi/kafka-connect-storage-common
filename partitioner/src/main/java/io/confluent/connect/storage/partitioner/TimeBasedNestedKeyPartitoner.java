@@ -16,7 +16,6 @@
 
 package io.confluent.connect.storage.partitioner;
 
-        import java.util.Date;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.connect.connector.ConnectRecord;
