@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 
-public class TimeBasedPartitionerTest extends StorageSinkTestBase {
+public class TimeBasedNestedKeyPartitonerTest extends StorageSinkTestBase {
     private static final String timeZoneString = "America/New_York";
     private static final DateTimeZone DATE_TIME_ZONE = DateTimeZone.forID(timeZoneString);
 
@@ -37,7 +37,7 @@ public class TimeBasedPartitionerTest extends StorageSinkTestBase {
     public void testNestedRecordFieldTimestampExtractorFromKey() throws Exception {
         Map<String, Object> config = createConfig("nested.timestamp", "key");
 
-        TimestampExtractor timestampExtractor = new TimeBasedPartitioner.RecordFieldTimestampExtractor();
+        TimestampExtractor timestampExtractor = new TimeBasedNestedKeyPartitoner.RecordFieldTimestampExtractor();
         timestampExtractor.configure(config);
 
         long expectedTimestamp = new DateTime(2015, 4, 2, 1, 0, 0, 0, DateTimeZone.forID(timeZoneString)).getMillis();
@@ -51,7 +51,7 @@ public class TimeBasedPartitionerTest extends StorageSinkTestBase {
     public void testNestedRecordFieldTimestampExtractorFromValue() throws Exception {
         Map<String, Object> config = createConfig("nested.timestamp", "value");
 
-        TimestampExtractor timestampExtractor = new TimeBasedPartitioner.RecordFieldTimestampExtractor();
+        TimestampExtractor timestampExtractor = new TimeBasedNestedKeyPartitoner.RecordFieldTimestampExtractor();
         timestampExtractor.configure(config);
 
         long expectedTimestamp = new DateTime(2015, 4, 2, 1, 0, 0, 0, DateTimeZone.forID(timeZoneString)).getMillis();
@@ -65,7 +65,7 @@ public class TimeBasedPartitionerTest extends StorageSinkTestBase {
     public void testNestedRecordFieldTimestampExtractorFromKeyString() throws Exception {
         Map<String, Object> config = createConfig("nested.timestamp", "key");
 
-        TimestampExtractor timestampExtractor = new TimeBasedPartitioner.RecordFieldTimestampExtractor();
+        TimestampExtractor timestampExtractor = new TimeBasedNestedKeyPartitoner.RecordFieldTimestampExtractor();
         timestampExtractor.configure(config);
 
         String keyTimestamp = "2017-11-29T19:48:26-05:00";
@@ -83,7 +83,7 @@ public class TimeBasedPartitionerTest extends StorageSinkTestBase {
     public void testNestedRecordFieldTimestampExtractorFromValueString() throws Exception {
         Map<String, Object> config = createConfig("nested.timestamp", "value");
 
-        TimestampExtractor timestampExtractor = new TimeBasedPartitioner.RecordFieldTimestampExtractor();
+        TimestampExtractor timestampExtractor = new TimeBasedNestedKeyPartitoner.RecordFieldTimestampExtractor();
         timestampExtractor.configure(config);
 
         String keyTimestamp = "2017-11-29T19:48:26-05:00";
