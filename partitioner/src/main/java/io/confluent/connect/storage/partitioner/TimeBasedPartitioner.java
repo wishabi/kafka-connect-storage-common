@@ -50,11 +50,11 @@ public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
   protected TimestampExtractor timestampExtractor;
 
   protected void init(
-          long partitionDurationMs,
-          String pathFormat,
-          Locale locale,
-          DateTimeZone timeZone,
-          Map<String, Object> config
+      long partitionDurationMs,
+      String pathFormat,
+      Locale locale,
+      DateTimeZone timeZone,
+      Map<String, Object> config
   ) {
     delim = (String) config.get(StorageCommonConfig.DIRECTORY_DELIM_CONFIG);
     this.partitionDurationMs = partitionDurationMs;
@@ -63,13 +63,13 @@ public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
     try {
       partitionFields = newSchemaGenerator(config).newPartitionFields(pathFormat);
       timestampExtractor = newTimestampExtractor(
-              (String) config.get(PartitionerConfig.TIMESTAMP_EXTRACTOR_CLASS_CONFIG));
+          (String) config.get(PartitionerConfig.TIMESTAMP_EXTRACTOR_CLASS_CONFIG));
       timestampExtractor.configure(config);
     } catch (IllegalArgumentException e) {
       ConfigException ce = new ConfigException(
-              PartitionerConfig.PATH_FORMAT_CONFIG,
-              pathFormat,
-              e.getMessage()
+          PartitionerConfig.PATH_FORMAT_CONFIG,
+          pathFormat,
+          e.getMessage()
       );
       ce.initCause(e);
       throw ce;
@@ -102,12 +102,12 @@ public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
   @Override
   public void configure(Map<String, Object> config) {
     long partitionDurationMsProp =
-            (long) config.get(PartitionerConfig.PARTITION_DURATION_MS_CONFIG);
+        (long) config.get(PartitionerConfig.PARTITION_DURATION_MS_CONFIG);
     if (partitionDurationMsProp < 0) {
       throw new ConfigException(
-              PartitionerConfig.PARTITION_DURATION_MS_CONFIG,
-              partitionDurationMsProp,
-              "Partition duration needs to be a positive."
+          PartitionerConfig.PARTITION_DURATION_MS_CONFIG,
+          partitionDurationMsProp,
+          "Partition duration needs to be a positive."
       );
     }
 
@@ -115,9 +115,9 @@ public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
     String pathFormat = (String) config.get(PartitionerConfig.PATH_FORMAT_CONFIG);
     if (pathFormat.equals("") || pathFormat.equals(delim)) {
       throw new ConfigException(
-              PartitionerConfig.PATH_FORMAT_CONFIG,
-              pathFormat,
-              "Path format cannot be empty."
+          PartitionerConfig.PATH_FORMAT_CONFIG,
+          pathFormat,
+          "Path format cannot be empty."
       );
     } else if (delim.equals(pathFormat.substring(pathFormat.length() - delim.length() - 1))) {
       // Delimiter has been added by the user at the end of the path format string. Removing.
@@ -127,18 +127,18 @@ public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
     String localeString = (String) config.get(PartitionerConfig.LOCALE_CONFIG);
     if (localeString.equals("")) {
       throw new ConfigException(
-              PartitionerConfig.LOCALE_CONFIG,
-              localeString,
-              "Locale cannot be empty."
+          PartitionerConfig.LOCALE_CONFIG,
+          localeString,
+          "Locale cannot be empty."
       );
     }
 
     String timeZoneString = (String) config.get(PartitionerConfig.TIMEZONE_CONFIG);
     if (timeZoneString.equals("")) {
       throw new ConfigException(
-              PartitionerConfig.TIMEZONE_CONFIG,
-              timeZoneString,
-              "Timezone cannot be empty."
+          PartitionerConfig.TIMEZONE_CONFIG,
+          timeZoneString,
+          "Timezone cannot be empty."
       );
     }
 
@@ -151,7 +151,7 @@ public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
   public String encodePartition(SinkRecord sinkRecord) {
     long timestamp = timestampExtractor.extract(sinkRecord);
     DateTime bucket = new DateTime(
-            getPartition(partitionDurationMs, timestamp, formatter.getZone())
+        getPartition(partitionDurationMs, timestamp, formatter.getZone())
     );
     return bucket.toString(formatter);
   }
@@ -162,15 +162,15 @@ public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
     Class<? extends SchemaGenerator<T>> generatorClass = null;
     try {
       generatorClass =
-              (Class<? extends SchemaGenerator<T>>) config.get(
-                      PartitionerConfig.SCHEMA_GENERATOR_CLASS_CONFIG
-              );
+          (Class<? extends SchemaGenerator<T>>) config.get(
+              PartitionerConfig.SCHEMA_GENERATOR_CLASS_CONFIG
+          );
       return generatorClass.getConstructor(Map.class).newInstance(config);
     } catch (ClassCastException
-            | IllegalAccessException
-            | InstantiationException
-            | InvocationTargetException
-            | NoSuchMethodException e) {
+        | IllegalAccessException
+        | InstantiationException
+        | InvocationTargetException
+        | NoSuchMethodException e) {
       ConfigException ce = new ConfigException("Invalid generator class: " + generatorClass);
       ce.initCause(e);
       throw ce;
@@ -184,24 +184,24 @@ public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
         case "Record":
         case "RecordField":
           extractorClassName = "io.confluent.connect.storage.partitioner.TimeBasedPartitioner$"
-                  + extractorClassName
-                  + "TimestampExtractor";
+              + extractorClassName
+              + "TimestampExtractor";
           break;
         default:
       }
       Class<?> klass = Class.forName(extractorClassName);
       if (!TimestampExtractor.class.isAssignableFrom(klass)) {
         throw new ConnectException(
-                "Class " + extractorClassName + " does not implement TimestampExtractor"
+            "Class " + extractorClassName + " does not implement TimestampExtractor"
         );
       }
       return (TimestampExtractor) klass.newInstance();
     } catch (ClassNotFoundException
-            | ClassCastException
-            | IllegalAccessException
-            | InstantiationException e) {
+        | ClassCastException
+        | IllegalAccessException
+        | InstantiationException e) {
       ConfigException ce = new ConfigException(
-              "Invalid timestamp extractor: " + extractorClassName
+          "Invalid timestamp extractor: " + extractorClassName
       );
       ce.initCause(e);
       throw ce;
@@ -259,11 +259,11 @@ public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
             return dateTime.parseMillis((String) timestampValue);
           default:
             log.error(
-                    "Unsupported type '{}' for user-defined timestamp field.",
-                    fieldSchema.type().getName()
+                "Unsupported type '{}' for user-defined timestamp field.",
+                fieldSchema.type().getName()
             );
             throw new PartitionException(
-                    "Error extracting timestamp from record field: " + fieldName
+                "Error extracting timestamp from record field: " + fieldName
             );
         }
       } else if (value instanceof Map) {
@@ -277,11 +277,11 @@ public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
           return ((Date) timestampValue).getTime();
         } else {
           log.error(
-                  "Unsupported type '{}' for user-defined timestamp field.",
-                  timestampValue.getClass()
+              "Unsupported type '{}' for user-defined timestamp field.",
+              timestampValue.getClass()
           );
           throw new PartitionException(
-                  "Error extracting timestamp from record field: " + fieldName
+              "Error extracting timestamp from record field: " + fieldName
           );
         }
       } else {
