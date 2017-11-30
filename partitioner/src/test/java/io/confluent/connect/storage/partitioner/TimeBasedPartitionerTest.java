@@ -20,6 +20,8 @@ import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
 import org.junit.Test;
 
 import java.util.*;
@@ -39,7 +41,7 @@ public class TimeBasedPartitionerTest extends StorageSinkTestBase {
         timestampExtractor.configure(config);
 
         long expectedTimestamp = new DateTime(2015, 4, 2, 1, 0, 0, 0, DateTimeZone.forID(timeZoneString)).getMillis();
-        SinkRecord sinkRecord = createSinkRecordWithNestedTimeField(expectedTimestamp);
+        SinkRecord sinkRecord = createSinkRecordWithNestedTimeField(expectedTimestamp, expectedTimestamp+100);
 
         long actualTimestamp = timestampExtractor.extract(sinkRecord);
         assertEquals(expectedTimestamp, actualTimestamp);
@@ -52,9 +54,44 @@ public class TimeBasedPartitionerTest extends StorageSinkTestBase {
         TimestampExtractor timestampExtractor = new TimeBasedPartitioner.RecordFieldTimestampExtractor();
         timestampExtractor.configure(config);
 
-        long timestamp = new DateTime(2015, 4, 2, 1, 0, 0, 0, DateTimeZone.forID(timeZoneString)).getMillis();
-        long expectedTimestamp = timestamp + 100;
-        SinkRecord sinkRecord = createSinkRecordWithNestedTimeField(timestamp);
+        long expectedTimestamp = new DateTime(2015, 4, 2, 1, 0, 0, 0, DateTimeZone.forID(timeZoneString)).getMillis();
+        SinkRecord sinkRecord = createSinkRecordWithNestedTimeField(expectedTimestamp+100, expectedTimestamp);
+
+        long actualTimestamp = timestampExtractor.extract(sinkRecord);
+        assertEquals(expectedTimestamp, actualTimestamp);
+    }
+
+    @Test
+    public void testNestedRecordFieldTimestampExtractorFromKeyString() throws Exception {
+        Map<String, Object> config = createConfig("nested.timestamp", "key");
+
+        TimestampExtractor timestampExtractor = new TimeBasedPartitioner.RecordFieldTimestampExtractor();
+        timestampExtractor.configure(config);
+
+        String keyTimestamp = "2017-11-29T19:48:26-05:00";
+        String valueTimestamp = "2013-04-21T02:59:59-00:00";
+
+        DateTimeFormatter parser = ISODateTimeFormat.dateTimeParser();
+        long expectedTimestamp = parser.parseMillis(keyTimestamp);
+        SinkRecord sinkRecord = createSinkRecordWithNestedTimeFieldString(keyTimestamp, valueTimestamp, expectedTimestamp);
+
+        long actualTimestamp = timestampExtractor.extract(sinkRecord);
+        assertEquals(expectedTimestamp, actualTimestamp);
+    }
+
+    @Test
+    public void testNestedRecordFieldTimestampExtractorFromValueString() throws Exception {
+        Map<String, Object> config = createConfig("nested.timestamp", "value");
+
+        TimestampExtractor timestampExtractor = new TimeBasedPartitioner.RecordFieldTimestampExtractor();
+        timestampExtractor.configure(config);
+
+        String keyTimestamp = "2017-11-29T19:48:26-05:00";
+        String valueTimestamp = "2013-04-21T02:59:59-00:00";
+
+        DateTimeFormatter parser = ISODateTimeFormat.dateTimeParser();
+        long expectedTimestamp = parser.parseMillis(valueTimestamp);
+        SinkRecord sinkRecord = createSinkRecordWithNestedTimeFieldString(keyTimestamp, valueTimestamp, expectedTimestamp);
 
         long actualTimestamp = timestampExtractor.extract(sinkRecord);
         assertEquals(expectedTimestamp, actualTimestamp);
@@ -77,9 +114,16 @@ public class TimeBasedPartitionerTest extends StorageSinkTestBase {
         return config;
     }
 
-    private SinkRecord createSinkRecordWithNestedTimeField(long timestamp) {
-        Struct keyRecord = createRecordWithNestedTimeField(timestamp);
-        Struct valueRecord = createRecordWithNestedTimeField(timestamp+100);
+    private SinkRecord createSinkRecordWithNestedTimeField(long keyTimestamp, long valueTimestamp) {
+        Struct keyRecord = createRecordWithNestedTimeField(keyTimestamp);
+        Struct valueRecord = createRecordWithNestedTimeField(valueTimestamp);
+        return new SinkRecord(TOPIC, PARTITION, keyRecord.schema(), keyRecord, valueRecord.schema(), valueRecord, 0L,
+                keyTimestamp, TimestampType.CREATE_TIME);
+    }
+
+    private SinkRecord createSinkRecordWithNestedTimeFieldString(String keyTimestamp, String valueTimestamp, long timestamp) {
+        Struct keyRecord = createRecordWithNestedStringTimeField(keyTimestamp);
+        Struct valueRecord = createRecordWithNestedStringTimeField(valueTimestamp);
         return new SinkRecord(TOPIC, PARTITION, keyRecord.schema(), keyRecord, valueRecord.schema(), valueRecord, 0L,
                 timestamp, TimestampType.CREATE_TIME);
     }

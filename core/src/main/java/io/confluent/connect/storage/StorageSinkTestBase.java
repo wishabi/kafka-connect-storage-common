@@ -123,11 +123,41 @@ public class StorageSinkTestBase {
         .put("timestamp", timestamp);
   }
 
+  protected Schema createSchemaWithStringTimestampField() {
+    return SchemaBuilder.struct().name("record").version(1)
+            .field("boolean", Schema.BOOLEAN_SCHEMA)
+            .field("int", Schema.INT32_SCHEMA)
+            .field("long", Schema.INT64_SCHEMA)
+            .field("float", Schema.FLOAT32_SCHEMA)
+            .field("double", Schema.FLOAT64_SCHEMA)
+            .field("string", SchemaBuilder.string().defaultValue("abc").build())
+            .field("timestamp", Schema.STRING_SCHEMA)
+            .build();
+  }
+
+  protected Struct createRecordWithStringTimestampField(Schema newSchema, String timestamp) {
+    return new Struct(newSchema)
+            .put("boolean", true)
+            .put("int", 12)
+            .put("long", 12L)
+            .put("float", 12.2f)
+            .put("double", 12.2)
+            .put("string", "def")
+            .put("timestamp", timestamp);
+  }
+
   protected Struct createRecordWithNestedTimeField(long timestamp) {
     Schema nestedChildSchema = createSchemaWithTimestampField();
     Schema nestedSchema = SchemaBuilder.struct().field("nested", nestedChildSchema);
     return new Struct(nestedSchema)
       .put("nested", createRecordWithTimestampField(nestedChildSchema, timestamp));
+  }
+
+  protected Struct createRecordWithNestedStringTimeField(String timestamp) {
+    Schema nestedChildSchema = createSchemaWithStringTimestampField();
+    Schema nestedSchema = SchemaBuilder.struct().field("nested", nestedChildSchema);
+    return new Struct(nestedSchema)
+            .put("nested", createRecordWithStringTimestampField(nestedChildSchema, timestamp));
   }
 
   public void setUp() throws Exception {
