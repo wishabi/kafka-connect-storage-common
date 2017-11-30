@@ -102,8 +102,8 @@ public class TimeBasedPartitionerTest extends StorageSinkTestBase {
 
         config.put(PartitionerConfig.TIMESTAMP_EXTRACTOR_CLASS_CONFIG, "Record" +
                 (timeFieldName == null ? "" : "Field"));
-        config.put(PartitionerConfig.PARTITION_DURATION_MS_CONFIG, TimeUnit.HOURS.toMillis(1));
-        config.put(PartitionerConfig.PATH_FORMAT_CONFIG, "'year'=YYYY/'month'=M/'day'=d/'hour'=H/");
+        config.put(PartitionerConfig.PARTITION_DURATION_MS_CONFIG, TimeUnit.MINUTES.toMillis(30));
+        config.put(PartitionerConfig.PATH_FORMAT_CONFIG, "'aid=flipp'/'dt'=YYYY-MM-dd/'time_slot'=HHmm");
         config.put(PartitionerConfig.LOCALE_CONFIG, Locale.US.toString());
         config.put(PartitionerConfig.TIMEZONE_CONFIG, DATE_TIME_ZONE.toString());
         config.put(PartitionerConfig.TIMESTAMP_FIELD_SOURCE_CONFIG, timeFieldSource);
