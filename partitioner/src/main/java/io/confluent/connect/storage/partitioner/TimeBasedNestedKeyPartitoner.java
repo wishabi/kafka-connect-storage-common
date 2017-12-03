@@ -17,174 +17,34 @@
 package io.confluent.connect.storage.partitioner;
 
 import org.apache.kafka.common.config.ConfigException;
-import org.apache.kafka.common.utils.Time;
 import org.apache.kafka.connect.connector.ConnectRecord;
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.data.Timestamp;
 import org.apache.kafka.connect.errors.ConnectException;
-import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.errors.DataException;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.Date;
-import java.util.Locale;
 import java.util.Map;
 
-import io.confluent.connect.storage.common.SchemaGenerator;
 import io.confluent.connect.storage.errors.PartitionException;
 
-public class TimeBasedNestedKeyPartitoner<T> extends DefaultPartitioner<T> {
-  // Duration of a partition in milliseconds.
-  private static final Logger log = LoggerFactory.getLogger(TimeBasedPartitioner.class);
-  private long partitionDurationMs;
-  private String pathFormat;
-  private DateTimeFormatter formatter;
-  protected TimestampExtractor timestampExtractor;
-
-  protected void init(
-      long partitionDurationMs,
-      String pathFormat,
-      Locale locale,
-      DateTimeZone timeZone,
-      Map<String, Object> config
-  ) {
-    delim = getDirectoryDelimiter(config);
-    this.partitionDurationMs = partitionDurationMs;
-    this.pathFormat = pathFormat;
-    this.formatter = getDateTimeFormatter(pathFormat, timeZone).withLocale(locale);
-    try {
-      partitionFields = newSchemaGenerator(config).newPartitionFields(pathFormat);
-      timestampExtractor = newTimestampExtractor(
-        (String) config.get(PartitionerConfig.TIMESTAMP_EXTRACTOR_CLASS_CONFIG));
-      timestampExtractor.configure(config);
-    } catch (IllegalArgumentException e) {
-      ConfigException ce = new ConfigException(
-          PartitionerConfig.PATH_FORMAT_CONFIG,
-          pathFormat,
-          e.getMessage()
-      );
-      ce.initCause(e);
-      throw ce;
-    }
-  }
-
-  private static DateTimeFormatter getDateTimeFormatter(String str, DateTimeZone timeZone) {
-    return DateTimeFormat.forPattern(str).withZone(timeZone);
-  }
-
-  public static long getPartition(long timeGranularityMs, long timestamp, DateTimeZone timeZone) {
-    long adjustedTimestamp = timeZone.convertUTCToLocal(timestamp);
-    long partitionedTime = (adjustedTimestamp / timeGranularityMs) * timeGranularityMs;
-    return timeZone.convertLocalToUTC(partitionedTime, false);
-  }
-
-  public long getPartitionDurationMs() {
-    return partitionDurationMs;
-  }
-
-  public String getPathFormat() {
-    return pathFormat;
-  }
-
-  // public for testing
-  public TimestampExtractor getTimestampExtractor() {
-    return timestampExtractor;
-  }
+public class TimeBasedNestedKeyPartitoner<T> extends TimeBasedPartitioner<T> {
+  private static final Logger log = LoggerFactory.getLogger(TimeBasedNestedKeyPartitoner.class);
 
   @Override
-  public void configure(Map<String, Object> config) {
-    long partitionDurationMsProp =
-        (long) config.get(PartitionerConfig.PARTITION_DURATION_MS_CONFIG);
-    if (partitionDurationMsProp < 0) {
-      throw new ConfigException(
-        PartitionerConfig.PARTITION_DURATION_MS_CONFIG,
-        partitionDurationMsProp,
-        "Partition duration needs to be a positive."
-      );
-    }
-
-    delim = getDirectoryDelimiter(config);
-    String pathFormat = (String) config.get(PartitionerConfig.PATH_FORMAT_CONFIG);
-    if (pathFormat.equals("") || pathFormat.equals(delim)) {
-      throw new ConfigException(
-        PartitionerConfig.PATH_FORMAT_CONFIG,
-        pathFormat,
-        "Path format cannot be empty."
-      );
-    } else if (delim.equals(pathFormat.substring(pathFormat.length() - delim.length() - 1))) {
-      // Delimiter has been added by the user at the end of the path format string. Removing.
-      pathFormat = pathFormat.substring(0, pathFormat.length() - delim.length());
-    }
-
-    String localeString = (String) config.get(PartitionerConfig.LOCALE_CONFIG);
-    if (localeString.equals("")) {
-      throw new ConfigException(
-        PartitionerConfig.LOCALE_CONFIG,
-        localeString,
-        "Locale cannot be empty."
-      );
-    }
-
-    String timeZoneString = (String) config.get(PartitionerConfig.TIMEZONE_CONFIG);
-    if (timeZoneString.equals("")) {
-      throw new ConfigException(
-        PartitionerConfig.TIMEZONE_CONFIG,
-        timeZoneString,
-        "Timezone cannot be empty."
-      );
-    }
-
-    Locale locale = new Locale(localeString);
-    DateTimeZone timeZone = DateTimeZone.forID(timeZoneString);
-    init(partitionDurationMsProp, pathFormat, locale, timeZone, config);
-  }
-
-  @Override
-  public String encodePartition(SinkRecord sinkRecord) {
-    long timestamp = timestampExtractor.extract(sinkRecord);
-    DateTime bucket = new DateTime(
-        getPartition(partitionDurationMs, timestamp, formatter.getZone())
-    );
-    return bucket.toString(formatter);
-  }
-
-  @Override
-  @SuppressWarnings("unchecked")
-  public SchemaGenerator<T> newSchemaGenerator(Map<String, Object> config) {
-    Class<? extends SchemaGenerator<T>> generatorClass = null;
-    try {
-      generatorClass =
-        (Class<? extends SchemaGenerator<T>>) config.get(
-          PartitionerConfig.SCHEMA_GENERATOR_CLASS_CONFIG
-        );
-      return generatorClass.getConstructor(Map.class).newInstance(config);
-    } catch (ClassCastException
-      | IllegalAccessException
-      | InstantiationException
-      | InvocationTargetException
-      | NoSuchMethodException e) {
-      ConfigException ce = new ConfigException("Invalid generator class: " + generatorClass);
-      ce.initCause(e);
-      throw ce;
-    }
-  }
-
   public TimestampExtractor newTimestampExtractor(String extractorClassName) {
     try {
       switch (extractorClassName) {
         case "Wallclock":
         case "Record":
         case "RecordField":
-          extractorClassName = "io.confluent.connect.storage.partitioner.TimeBasedPartitioner$"
+          extractorClassName = "io.confluent.connect.storage.partitioner.TimeBasedNestedKeyPartitoner$"
             + extractorClassName
             + "TimestampExtractor";
           break;
@@ -209,27 +69,7 @@ public class TimeBasedNestedKeyPartitoner<T> extends DefaultPartitioner<T> {
     }
   }
 
-  public static class WallclockTimestampExtractor implements TimestampExtractor {
-    @Override
-    public void configure(Map<String, Object> config) {}
-
-    @Override
-    public Long extract(ConnectRecord<?> record) {
-      return Time.SYSTEM.milliseconds();
-    }
-  }
-
-  public static class RecordTimestampExtractor implements TimestampExtractor {
-    @Override
-    public void configure(Map<String, Object> config) {}
-
-    @Override
-    public Long extract(ConnectRecord<?> record) {
-      return record.timestamp();
-    }
-  }
-
-  public static class RecordFieldTimestampExtractor implements TimestampExtractor {
+  public static class RecordFieldTimestampExtractor extends TimeBasedPartitioner.RecordFieldTimestampExtractor {
     private String fieldName;
     private String fieldNameSource;
     private DateTimeFormatter dateTime;
@@ -244,16 +84,19 @@ public class TimeBasedNestedKeyPartitoner<T> extends DefaultPartitioner<T> {
     @Override
     public Long extract(ConnectRecord<?> record) {
       Object source;
+      Schema sourceSchema;
       if (fieldNameSource.equals("key")) {
         source = record.key();
+        sourceSchema = record.keySchema();
       } else {
         source = record.value();
+        sourceSchema = record.valueSchema();
       }
 
       if (source instanceof Struct) {
         Struct struct = (Struct) source;
         Object timestampValue = getNestedFieldValue(struct);
-        Schema fieldSchema = getNestedField(record.valueSchema()).schema();
+        Schema fieldSchema = getNestedField(sourceSchema).schema();
 
         if (Timestamp.LOGICAL_NAME.equals(fieldSchema.name())) {
           return ((Date) timestampValue).getTime();
