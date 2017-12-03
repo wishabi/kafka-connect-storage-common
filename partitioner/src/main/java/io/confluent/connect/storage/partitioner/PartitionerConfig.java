@@ -100,7 +100,7 @@ public class PartitionerConfig extends AbstractConfig implements ComposableConfi
 
   public static final String TIMESTAMP_FIELD_SOURCE_CONFIG = "timestamp.source";
   public static final String TIMESTAMP_FIELD_SOURCE_DOC =
-          "The source of the record field to be used as timestamp by the timestamp extractor.";
+      "The source of the record field to be used as timestamp by the timestamp extractor, either key or value.";
   public static final String TIMESTAMP_FIELD_SOURCE_DEFAULT = "value";
   public static final String TIMESTAMP_FIELD_SOURCE_DISPLAY = "Source of the Record Field for Timestamp Extractor";
 
