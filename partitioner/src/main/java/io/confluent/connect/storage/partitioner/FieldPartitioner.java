@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
-import io.confluent.connect.storage.common.StorageCommonConfig;
 import io.confluent.connect.storage.errors.PartitionException;
 
 public class FieldPartitioner<T> extends DefaultPartitioner<T> {
@@ -36,7 +35,7 @@ public class FieldPartitioner<T> extends DefaultPartitioner<T> {
   public void configure(Map<String, Object> config) {
     fieldName = (String) config.get(PartitionerConfig.PARTITION_FIELD_NAME_CONFIG);
     partitionFields = newSchemaGenerator(config).newPartitionFields(fieldName);
-    delim = (String) config.get(StorageCommonConfig.DIRECTORY_DELIM_CONFIG);
+    delim = getDirectoryDelimiter(config);
   }
 
   @Override

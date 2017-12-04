@@ -38,7 +38,6 @@ import java.util.Locale;
 import java.util.Map;
 
 import io.confluent.connect.storage.common.SchemaGenerator;
-import io.confluent.connect.storage.common.StorageCommonConfig;
 import io.confluent.connect.storage.errors.PartitionException;
 
 public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
@@ -56,7 +55,7 @@ public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
       DateTimeZone timeZone,
       Map<String, Object> config
   ) {
-    delim = (String) config.get(StorageCommonConfig.DIRECTORY_DELIM_CONFIG);
+    delim = getDirectoryDelimiter(config);
     this.partitionDurationMs = partitionDurationMs;
     this.pathFormat = pathFormat;
     this.formatter = getDateTimeFormatter(pathFormat, timeZone).withLocale(locale);
@@ -111,7 +110,7 @@ public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
       );
     }
 
-    String delim = (String) config.get(StorageCommonConfig.DIRECTORY_DELIM_CONFIG);
+    String delim = getDirectoryDelimiter(config);
     String pathFormat = (String) config.get(PartitionerConfig.PATH_FORMAT_CONFIG);
     if (pathFormat.equals("") || pathFormat.equals(delim)) {
       throw new ConfigException(

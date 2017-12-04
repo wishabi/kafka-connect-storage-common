@@ -38,7 +38,7 @@ public class DefaultPartitioner<T> implements Partitioner<T> {
   @Override
   public void configure(Map<String, Object> config) {
     partitionFields = newSchemaGenerator(config).newPartitionFields(PARTITION_FIELD);
-    delim = (String) config.get(StorageCommonConfig.DIRECTORY_DELIM_CONFIG);
+    delim = getDirectoryDelimiter(config);
   }
 
   @Override
@@ -54,6 +54,15 @@ public class DefaultPartitioner<T> implements Partitioner<T> {
   @Override
   public List<T> partitionFields() {
     return partitionFields;
+  }
+
+  protected String getDirectoryDelimiter(Map<String, Object> config) {
+    String delim = (String) config.get(StorageCommonConfig.DIRECTORY_DELIM_CONFIG);
+    if (delim == null) {
+      delim = StorageCommonConfig.DIRECTORY_DELIM_DEFAULT;
+
+    }
+    return delim;
   }
 
   @SuppressWarnings("unchecked")
