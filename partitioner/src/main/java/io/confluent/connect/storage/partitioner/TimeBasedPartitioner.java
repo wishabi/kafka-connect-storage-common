@@ -111,7 +111,7 @@ public class TimeBasedPartitioner<T> extends DefaultPartitioner<T> {
       );
     }
 
-    delim = (String) config.get(StorageCommonConfig.DIRECTORY_DELIM_CONFIG);
+    String delim = (String) config.get(StorageCommonConfig.DIRECTORY_DELIM_CONFIG);
     String pathFormat = (String) config.get(PartitionerConfig.PATH_FORMAT_CONFIG);
     if (pathFormat.equals("") || pathFormat.equals(delim)) {
       throw new ConfigException(
