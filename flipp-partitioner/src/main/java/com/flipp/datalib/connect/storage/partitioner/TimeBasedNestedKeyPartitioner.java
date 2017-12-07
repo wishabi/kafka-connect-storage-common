@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
-package io.confluent.connect.storage.partitioner;
+package com.flipp.datalib.connect.storage.partitioner;
 
+import io.confluent.connect.storage.partitioner.TimeBasedPartitioner;
+import io.confluent.connect.storage.partitioner.TimestampExtractor;
+import io.confluent.connect.storage.errors.PartitionException;
 import org.apache.kafka.common.config.ConfigException;
 import org.apache.kafka.connect.connector.ConnectRecord;
 import org.apache.kafka.connect.data.Field;
@@ -32,10 +35,8 @@ import org.slf4j.LoggerFactory;
 import java.util.Date;
 import java.util.Map;
 
-import io.confluent.connect.storage.errors.PartitionException;
-
-public class TimeBasedNestedKeyPartitoner<T> extends TimeBasedPartitioner<T> {
-  private static final Logger log = LoggerFactory.getLogger(TimeBasedNestedKeyPartitoner.class);
+public class TimeBasedNestedKeyPartitioner<T> extends TimeBasedPartitioner<T> {
+  private static final Logger log = LoggerFactory.getLogger(TimeBasedNestedKeyPartitioner.class);
 
   @Override
   public TimestampExtractor newTimestampExtractor(String extractorClassName) {
@@ -44,23 +45,23 @@ public class TimeBasedNestedKeyPartitoner<T> extends TimeBasedPartitioner<T> {
         case "Wallclock":
         case "Record":
         case "RecordField":
-          extractorClassName = "io.confluent.connect.storage.partitioner.TimeBasedNestedKeyPartitoner$"
-            + extractorClassName
-            + "TimestampExtractor";
+          extractorClassName = "io.confluent.connect.storage.partitioner.TimeBasedNestedKeyPartitioner$"
+              + extractorClassName
+              + "TimestampExtractor";
           break;
         default:
       }
       Class<?> klass = Class.forName(extractorClassName);
       if (!TimestampExtractor.class.isAssignableFrom(klass)) {
         throw new ConnectException(
-          "Class " + extractorClassName + " does not implement TimestampExtractor"
+            "Class " + extractorClassName + " does not implement TimestampExtractor"
         );
       }
       return (TimestampExtractor) klass.newInstance();
     } catch (ClassNotFoundException
-      | ClassCastException
-      | IllegalAccessException
-      | InstantiationException e) {
+        | ClassCastException
+        | IllegalAccessException
+        | InstantiationException e) {
       ConfigException ce = new ConfigException(
           "Invalid timestamp extractor: " + extractorClassName
       );
@@ -76,8 +77,8 @@ public class TimeBasedNestedKeyPartitoner<T> extends TimeBasedPartitioner<T> {
 
     @Override
     public void configure(Map<String, Object> config) {
-      fieldName = (String) config.get(PartitionerConfig.TIMESTAMP_FIELD_NAME_CONFIG);
-      fieldNameSource = (String) config.get(PartitionerConfig.TIMESTAMP_FIELD_SOURCE_CONFIG);
+      fieldName = (String) config.get(TimeBasedNestedKeyPartitionerConfig.TIMESTAMP_FIELD_NAME_CONFIG);
+      fieldNameSource = (String) config.get(TimeBasedNestedKeyPartitionerConfig.TIMESTAMP_FIELD_SOURCE_CONFIG);
       dateTime = ISODateTimeFormat.dateTimeParser();
     }
 
@@ -147,7 +148,7 @@ public class TimeBasedNestedKeyPartitoner<T> extends TimeBasedPartitioner<T> {
         field = struct.get(fieldName);
       } catch (DataException e) {
         throw new DataException(
-          String.format("The field named '%s' does not exist.", fieldName), e);
+            String.format("The field named '%s' does not exist.", fieldName), e);
       }
       return field;
     }
@@ -164,7 +165,7 @@ public class TimeBasedNestedKeyPartitoner<T> extends TimeBasedPartitioner<T> {
             tmpObject = getField(tmpStruct, fieldNames[i]);
           } catch (DataException e) {
             throw new DataException(
-              String.format("Unable to find nested field '%s'", fieldNames[i]));
+                String.format("Unable to find nested field '%s'", fieldNames[i]));
           }
           tmpStruct = (Struct) tmpObject;
           i++;
@@ -173,7 +174,7 @@ public class TimeBasedNestedKeyPartitoner<T> extends TimeBasedPartitioner<T> {
         tmpObject = getField(tmpStruct, fieldNames[i]);
       } catch (DataException e) {
         throw new DataException(
-          String.format("The nested field named '%s' does not exist.", fieldName), e);
+            String.format("The nested field named '%s' does not exist.", fieldName), e);
       }
       return tmpObject;
     }
@@ -189,7 +190,7 @@ public class TimeBasedNestedKeyPartitoner<T> extends TimeBasedPartitioner<T> {
           tmpObject = tmpMap.get(fieldNames[i]);
           if (tmpObject == null) {
             throw new DataException(
-              String.format("Unable to find nested field '%s'", fieldNames[i]));
+                String.format("Unable to find nested field '%s'", fieldNames[i]));
           }
           tmpMap = (Map<?, ?>) tmpObject;
           i++;
@@ -198,11 +199,11 @@ public class TimeBasedNestedKeyPartitoner<T> extends TimeBasedPartitioner<T> {
         tmpObject = tmpMap.get(fieldNames[i]);
         if (tmpObject == null) {
           throw new DataException(
-            String.format("Unable to find nested field '%s'", fieldNames[i]));
+              String.format("Unable to find nested field '%s'", fieldNames[i]));
         }
       } catch (DataException e) {
         throw new DataException(
-          String.format("The nested field named '%s' does not exist.", fieldName), e);
+            String.format("The nested field named '%s' does not exist.", fieldName), e);
       }
       return tmpObject;
     }
@@ -222,7 +223,7 @@ public class TimeBasedNestedKeyPartitoner<T> extends TimeBasedPartitioner<T> {
             tmpField = tmpField.schema().field(nestedFieldName);
           } catch (DataException e) {
             throw new DataException(
-              String.format("Unable to find nested field '%s'", nestedFieldName));
+                String.format("Unable to find nested field '%s'", nestedFieldName));
           }
           i++;
         }
@@ -230,10 +231,9 @@ public class TimeBasedNestedKeyPartitoner<T> extends TimeBasedPartitioner<T> {
         tmpField = tmpField.schema().field(fieldNames[i]);
       } catch (DataException e) {
         throw new DataException(
-          String.format("The nested field named '%s' does not exist.", fieldName), e);
+            String.format("The nested field named '%s' does not exist.", fieldName), e);
       }
       return tmpField;
     }
   }
 }
-

@@ -98,12 +98,6 @@ public class PartitionerConfig extends AbstractConfig implements ComposableConfi
   public static final String TIMESTAMP_FIELD_NAME_DEFAULT = "timestamp";
   public static final String TIMESTAMP_FIELD_NAME_DISPLAY = "Record Field for Timestamp Extractor";
 
-  public static final String TIMESTAMP_FIELD_SOURCE_CONFIG = "timestamp.source";
-  public static final String TIMESTAMP_FIELD_SOURCE_DOC =
-      "The source of the record field to be used as timestamp by the timestamp extractor, either key or value.";
-  public static final String TIMESTAMP_FIELD_SOURCE_DEFAULT = "value";
-  public static final String TIMESTAMP_FIELD_SOURCE_DISPLAY = "Source of the Record Field for Timestamp Extractor";
-
   // CHECKSTYLE:OFF
   public static final ConfigDef.Recommender partitionerClassDependentsRecommender =
       new PartitionerClassDependentsRecommender();
@@ -213,16 +207,6 @@ public class PartitionerConfig extends AbstractConfig implements ComposableConfi
           ++orderInGroup,
           Width.LONG,
           TIMESTAMP_FIELD_NAME_DISPLAY);
-
-      CONFIG_DEF.define(TIMESTAMP_FIELD_SOURCE_CONFIG,
-          Type.STRING,
-          TIMESTAMP_FIELD_SOURCE_DEFAULT,
-          Importance.MEDIUM,
-          TIMESTAMP_FIELD_SOURCE_DOC,
-          group,
-          ++orderInGroup,
-          Width.LONG,
-          TIMESTAMP_FIELD_SOURCE_DISPLAY);
     }
   }
 
