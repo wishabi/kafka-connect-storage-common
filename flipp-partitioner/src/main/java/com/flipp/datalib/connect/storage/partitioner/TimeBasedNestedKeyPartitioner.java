@@ -46,7 +46,7 @@ public class TimeBasedNestedKeyPartitioner<T> extends TimeBasedPartitioner<T> {
         case "Record":
         case "RecordField":
           extractorClassName =
-              "io.confluent.connect.storage.partitioner.TimeBasedNestedKeyPartitioner$"
+              "com.flipp.datalib.connect.storage.partitioner.TimeBasedNestedKeyPartitioner$"
               + extractorClassName
               + "TimestampExtractor";
           break;
