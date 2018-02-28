@@ -62,6 +62,7 @@
         <module>format</module>
         <module>hive</module>
         <module>package-kafka-connect-storage-common</module>
+        <module>flipp-partitioner</module>
     </modules>
 
     <properties>
@@ -112,6 +113,11 @@
             <dependency>
                 <groupId>io.confluent</groupId>
                 <artifactId>kafka-connect-storage-partitioner</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.confluent</groupId>
+                <artifactId>kafka-connect-storage-flipp-partitioner</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
