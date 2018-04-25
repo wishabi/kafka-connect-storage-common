@@ -23,7 +23,7 @@
     <parent>
         <groupId>io.confluent</groupId>
         <artifactId>kafka-connect-storage-common-parent</artifactId>
-        <version>4.0.0</version>
+        <version>4.1.0</version>
     </parent>
 
     <artifactId>kafka-connect-storage-partitioner</artifactId>
@@ -33,12 +33,16 @@
     <dependencies>
         <dependency>
             <groupId>io.confluent</groupId>
-            <artifactId>kafka-connect-storage-common</artifactId>
+            <artifactId>kafka-connect-storage-core</artifactId>
             <version>${confluent.version}</version>
         </dependency>
         <dependency>
             <groupId>joda-time</groupId>
             <artifactId>joda-time</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
         </dependency>
     </dependencies>
 </project>
