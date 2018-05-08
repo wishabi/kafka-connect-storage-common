@@ -103,8 +103,8 @@ public class TimeBasedNestedKeyPartitionerTest extends StorageSinkTestBase {
   }
 
   private SinkRecord createSinkRecordWithNestedTimeField(long keyTimestamp, long valueTimestamp) {
-    Struct keyRecord = createRecordWithNestedTimeField(keyTimestamp);
-    Struct valueRecord = createRecordWithNestedTimeField(valueTimestamp);
+    Struct keyRecord = createRecordWithNestedTimeStampField(keyTimestamp);
+    Struct valueRecord = createRecordWithNestedTimeStampField(valueTimestamp);
     return new SinkRecord(TOPIC, PARTITION, keyRecord.schema(), keyRecord, valueRecord.schema(), valueRecord, 0L,
         keyTimestamp, TimestampType.CREATE_TIME);
   }
@@ -139,7 +139,7 @@ public class TimeBasedNestedKeyPartitionerTest extends StorageSinkTestBase {
         .put("timestamp", timestamp);
   }
 
-  private Struct createRecordWithNestedTimeField(long timestamp) {
+  private Struct createRecordWithNestedTimeStampField(long timestamp) {
     Schema nestedChildSchema = createSchemaWithTimestampField();
     Schema nestedSchema = SchemaBuilder.struct().field("nested", nestedChildSchema);
     return new Struct(nestedSchema)

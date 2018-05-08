@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
 
 public class AWishabiNginxTimestampExtractor implements TimestampExtractor {
   private DateTimeFormatter dateTime;
-  private String regex = "(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})? (.*) \\[(.+?)\\] .*";
+  private String regex = "(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})? (.*?) \\[(.+?)\\] .*";
   private Pattern pattern = Pattern.compile(regex);
 
   @Override
@@ -38,23 +38,30 @@ public class AWishabiNginxTimestampExtractor implements TimestampExtractor {
 
   @Override
   public Long extract(ConnectRecord<?> record) {
+    String beaconString = null;
     try {
       Object beacon = record.value();
-      String beaconString;
 
       if (beacon instanceof byte[]) {
         beaconString = new String((byte[]) beacon);
       } else if (beacon instanceof String) {
         beaconString = (String) beacon;
       } else {
-        throw new PartitionException("Error extracting timestamp from record: " + record);
+        throw new PartitionException("Error extracting timestamp."
+            + " Record is not an instance of String or byte[] for record: " + record);
       }
 
       Matcher m = pattern.matcher(beaconString);
       m.matches();
       return dateTime.parseMillis(m.group(3));
     } catch (IllegalStateException | IllegalArgumentException e) {
-      throw new PartitionException("Error extracting timestamp from record: " + record);
+      if (beaconString == null) {
+        throw new PartitionException("Error extracting timestamp from record: " + record
+            + "\nException: " + e.fillInStackTrace());
+      } else {
+        throw new PartitionException("Error extracting timestamp from record: " + record
+            + "\nBeacon = " + beaconString + "\nException: " + e.toString());
+      }
     }
   }
 }
