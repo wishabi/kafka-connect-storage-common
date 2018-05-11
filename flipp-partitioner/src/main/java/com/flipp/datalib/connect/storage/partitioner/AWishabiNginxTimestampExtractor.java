@@ -21,12 +21,16 @@ import io.confluent.connect.storage.partitioner.TimestampExtractor;
 import org.apache.kafka.connect.connector.ConnectRecord;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class AWishabiNginxTimestampExtractor implements TimestampExtractor {
+  private static final Logger log = LoggerFactory.getLogger(AWishabiNginxTimestampExtractor.class);
+
   private DateTimeFormatter dateTime;
   private String regex = "(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3})? (.*?) \\[(.+?)\\] .*";
   private Pattern pattern = Pattern.compile(regex);
@@ -56,11 +60,12 @@ public class AWishabiNginxTimestampExtractor implements TimestampExtractor {
       return dateTime.parseMillis(m.group(3));
     } catch (IllegalStateException | IllegalArgumentException e) {
       if (beaconString == null) {
-        throw new PartitionException("Error extracting timestamp from record: " + record
-            + "\nException: " + e.fillInStackTrace());
+        log.error("Error extracting timestamp from record: " + record + "\nException: ", e);
+        return 0L;
       } else {
-        throw new PartitionException("Error extracting timestamp from record: " + record
-            + "\nBeacon = " + beaconString + "\nException: " + e.toString());
+        log.error("Error extracting timestamp from record: " + record + "\nBeacon = "
+            + beaconString + "\nException: ", e);
+        return 0L;
       }
     }
   }
